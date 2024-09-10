@@ -36,33 +36,35 @@ const usuarioController = {
       const resultado = await nuevoUsuario.save();
       res.status(201).json(resultado);
     } catch (error) {
-      console.error("Error al crear usuario:", error); // Imprime el error en consola
+      console.error("Error al crear usuario:", error); 
       res.status(500).json({ error: "Error al crear usuario" });
     }
   },   
 
-  // Login------------------------------------------------------------------------------------
-  login: async (req, res) => {
-    const { email, password } = req.body;
+// Login------------------------------------------------------------------------------------
+login: async (req, res) => {
+  const { email, password } = req.body;
 
-    try {
-      const usuario = await Usuario.findOne({ email });
-      if (
-        !usuario ||
-        usuario.estado === 0 ||
-        !bcryptjs.compareSync(password, usuario.password)
-      ) {
-        return res
-          .status(401)
-          .json({ msg: "Usuario / Password no son correctos" });
-      }
+  try {
+  
+    const usuario = await Usuario.findOne({ email });
 
-      const token = await generarJWT(usuario._id);
-      res.json({ usuario, token });
-    } catch (error) {
-      res.status(500).json({ msg: "Hable con el WebMaster" });
+    if (!usuario || usuario.estado === 0) {
+      return res.status(401).json({ msg: "Usuario no encontrado o está desactivado" });
     }
-  },
+    const passwordMatch = bcryptjs.compareSync(password, usuario.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ msg: "Contraseña incorrecta" });
+    }
+
+    const token = await generarJWT(usuario._id);
+
+    res.json({ usuario, token });
+  } catch (error) {
+    console.error(error);  
+    res.status(500).json({ msg: "Error interno del servidor. Hable con el WebMaster" });
+  }
+},
 
   // Listar todos los usuarios--------------------------------------------------------------------------------------
 
@@ -102,36 +104,30 @@ editarUsuario: async (req, res) => {
     res.status(500).json({ error: "Error al editar usuario" });
   }
 },
-  // Cambiar la contraseña de un usuario por su ID---------------------------------------------------------------------------
-  cambiarContraseña: async (req, res) => {
-    const { id } = req.params;
-    const { password } = req.body;
 
-    try {
-      // Permitir que un usuario cambie solo su propia contraseña
-      if (req.usuario._id.toString() !== id && !req.usuario.roles.includes("admin")) {
-        return res
-          .status(403)
-          .json({
-            error:
-              "No tienes permiso para cambiar la contraseña de este usuario",
-          });
-      }
+// Cambiar la contraseña de un usuario por su ID
+cambiarContraseña: async (req, res) => {
+  const { id } = req.params;  
+  const { contraseñavieja, password } = req.body;  
+  try {
 
-      const usuario = await Usuario.findById(id);
-      if (!usuario) {
-        return res.status(404).json({ error: "Usuario no encontrado" });
-      }
+    const usuario = await Usuario.findById(id);
 
-      const salt = bcryptjs.genSaltSync();
-      usuario.password = bcryptjs.hashSync(password, salt);
-
-      await usuario.save();
-      res.json({ msg: "Contraseña cambiada correctamente" });
-    } catch (error) {
-      res.status(500).json({ error: "Error al cambiar contraseña" });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
     }
-  },
+    if (!bcryptjs.compareSync(contraseñavieja, usuario.password)) {
+      return res.status(401).json({ msg: "La contraseña actual es incorrecta" });
+    }
+    const salt = bcryptjs.genSaltSync();
+    usuario.password = bcryptjs.hashSync(password, salt);
+    await usuario.save();
+
+    res.json({ msg: "Contraseña cambiada exitosamente" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al cambiar la contraseña" });
+  }
+},
 
   // Eliminar un usuario por su ID----------------------------------------------------------------------
   eliminarUsuario: async (req, res) => {

@@ -40,11 +40,12 @@ router.put('/editar/:id', [
 ], usuarioController.editarUsuario);
 
 router.put('/cambiarContrasena/:id', [
-    validarJWT,
-    check('id', 'ID inválido').isMongoId(),
-    check('password', 'La contraseña debe tener al menos 8 caracteres').isLength({ min: 8 }),
-    validarCampos
-], usuarioController.cambiarContraseña);
+    validarJWT,  
+    check('id', 'ID inválido').isMongoId(),  
+    check('contraseñavieja', 'La contraseña actual es requerida').not().isEmpty(),  
+    check('contraseñavieja', 'La contraseña debe tener al menos 8 caracteres').isLength({ min: 8 }),  
+    check('password', 'La nueva contraseña debe tener al menos 8 caracteres').isLength({ min: 8 }),  
+], usuarioController.cambiarContraseña);  
 
 
 router.put('/activarDesactivar/:id', [
