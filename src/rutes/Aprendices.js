@@ -5,22 +5,27 @@ import { validarJWT } from '../middleware/validarJWT.js';
 import { validarCampos } from '../middleware/validar-campos.js';
 import { aprendicesHelper } from '../helpers/Aprendices.js';
 import { fichasHelper } from '../helpers/Fichas.js';
+import upload from '../middleware/multer.js'
 
 const router = express.Router();
 
 // POST /api/aprendices
-router.post('/', [
-     validarJWT,
-    check('cc', 'El campo cc es obligatorio').not().isEmpty(),
-    check('cc').custom(aprendicesHelper.existecc),
-    check('nombre', 'El campo nombre es obligatorio').not().isEmpty(),
-    check('email', 'El campo email es obligatorio').not().isEmpty().isEmail(),
-    check('email').custom(aprendicesHelper.existeEmail),
-    check('telefono', 'El campo telefono es obligatorio').not().isEmpty(),
-    check('IdFicha', 'El campo IdFicha es obligatorio').not().isEmpty(),
-    check('IdFicha').custom(fichasHelper.existeFichaID),
-    validarCampos
-], controladorAprendis.crearAprendis);
+router.post('/', 
+    validarJWT,
+    upload.single('fotos'),  // Aquí 'fotos' debe coincidir con el campo en el formulario
+    [
+        check('cc', 'El campo cc es obligatorio').not().isEmpty(),
+        check('cc').custom(aprendicesHelper.existecc),
+        check('nombre', 'El campo nombre es obligatorio').not().isEmpty(),
+        check('email', 'El campo email es obligatorio').not().isEmpty().isEmail(),
+        check('email').custom(aprendicesHelper.existeEmail),
+        check('telefono', 'El campo telefono es obligatorio').not().isEmpty(),
+        check('IdFicha', 'El campo IdFicha es obligatorio').not().isEmpty(),
+        check('IdFicha').custom(fichasHelper.existeFichaID),
+        validarCampos
+    ], 
+    controladorAprendis.crearAprendis
+);
 
 
 // GET /api/aprendices/listar

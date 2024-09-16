@@ -8,6 +8,8 @@ const controladorAprendis = {
     // Crear un nuevo aprendiz
     crearAprendis: async (req, res) => {
         const { cc, nombre, email, telefono, IdFicha } = req.body;
+        const firmaVirtual = req.file ? req.file.path : null; // Obtén la ruta del archivo si se subió
+
         try {
             const fichaExistente = await Fichas.findById(IdFicha);
             if (!fichaExistente) {
@@ -19,7 +21,8 @@ const controladorAprendis = {
                 nombre,
                 email,
                 telefono,
-                IdFicha
+                IdFicha,
+                firmaVirtual // Asigna la ruta de la foto si está presente
             });
 
             const resultado = await nuevoAprendis.save();
