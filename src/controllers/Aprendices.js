@@ -1,14 +1,70 @@
 import mongoose from 'mongoose';
 import Aprendis from '../models/Aprendices.js';
 import Fichas from '../models/Fichas.js';
+import subirArchivo from '../helpers/subir_archivo.js';
+import * as fs from 'fs'
+import path from 'path'
+import url from 'url'
+import { v2 as cloudinary } from 'cloudinary'
 
 
 const controladorAprendis = {
 
+ cargarArchivoCloud : async (req, res) => {
+        cloudinary.config({
+            cloud_name: process.env.CLOUDINARY_NAME,
+            api_key: process.env.CLOUDINARY_KEY,
+            api_secret: process.env.CLOUDINARY_SECRET,
+            secure: true
+        });
+    
+        const { id } = req.params;
+        try {
+            //subir archivo
+            const { tempFilePath } = req.files.archivo
+            cloudinary.uploader.upload(tempFilePath,
+                { width: 250, crop: "limit" },
+                async function (error, result) {
+                    if (result) {
+                        let envio = await Aprendis.findById(id);
+                        if (envio.firmaVirtual) {
+                            const nombreTemp = envio.firmaVirtual.split('/')
+                            const nombreArchivo = nombreTemp[nombreTemp.length - 1] // hgbkoyinhx9ahaqmpcwl jpg
+                            const [public_id] = nombreArchivo.split('.')
+                            cloudinary.uploader.destroy(public_id)
+                        }
+                        envio = await Aprendis.findByIdAndUpdate(id, { firmaVirtual: result.url })
+                    
+                        res.json({ url: result.url });
+                    } else {
+                        res.json(error)
+                    }
+    
+                })
+        } catch (error) {
+            res.status(400).json({ error, 'general': 'Controlador' })
+        }
+    },
+    
+    
+    mostrarImagenCloud : async (req, res) => {
+        const { id } = req.params
+    
+        try {
+            let aprendiz = await Aprendis.findById(id)
+            if (aprendiz.firmaVirtual) {
+                return res.json({ url: aprendiz.firmaVirtual})
+            }
+            res.status(400).json({ msg: 'Falta Imagen' })
+        } catch (error) {
+            res.status(400).json({ error })
+        }
+    },
+    
+
     // Crear un nuevo aprendiz
     crearAprendis: async (req, res) => {
         const { cc, nombre, email, telefono, IdFicha } = req.body;
-        const firmaVirtual = req.file ? req.file.path : null; // Obtén la ruta del archivo si se subió
 
         try {
             const fichaExistente = await Fichas.findById(IdFicha);
@@ -22,7 +78,7 @@ const controladorAprendis = {
                 email,
                 telefono,
                 IdFicha,
-                firmaVirtual // Asigna la ruta de la foto si está presente
+                firmaVirtual 
             });
 
             const resultado = await nuevoAprendis.save();

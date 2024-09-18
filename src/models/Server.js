@@ -7,6 +7,7 @@ import usuarioRoutes from '../rutes/Usuarios.js';
 import bitacorasRutes from '../rutes/Bitacora.js';
 import aprendicesRutes from '../rutes/Aprendices.js';
 import fichasRutes from '../rutes/Fichas.js';
+import fileUpload from 'express-fileupload';
 
 class Server {
     constructor() {
@@ -31,7 +32,13 @@ class Server {
         this.app.use(cors());
         this.app.use(express.json());
         this.app.use(express.static('public'));
-        this.app.use('/uploads', express.static('uploads'))
+        this.app.use(
+            fileUpload({
+              useTempFiles: true,
+              tempFileDir: "/tmp/",
+              createParentPath: true,
+            })
+          );
     }
 
     routes() {
