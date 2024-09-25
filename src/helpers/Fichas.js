@@ -35,6 +35,17 @@ const fichasHelper = {
             throw new Error(`Error al verificar codigo: ${error.message}`);
         }
     },
+
+    CodigoValido: async (codigo, id) => {
+        try {
+            const documento = await Fichas.findOne({ codigo });
+            if (documento && documento._id.toString() !== id) {
+                throw new Error(`El código ${codigo} ya existe`);
+            }
+        } catch (error) {
+            throw new Error(`Error al validar código: ${error.message}`);
+        }
+    },
 };
 
 export { fichasHelper };

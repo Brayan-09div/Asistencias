@@ -82,6 +82,7 @@ const controladorAprendis = {
             });
 
             const resultado = await nuevoAprendis.save();
+            
             console.log('Aprendiz creado:', resultado);
             res.json(resultado);
         } catch (error) {
