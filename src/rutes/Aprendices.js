@@ -11,7 +11,7 @@ const router = express.Router();
 
 // POST /api/aprendices
 router.post('/', 
-    validarJWT,[
+    validarJWT, [
         check('cc', 'El campo cc es obligatorio').not().isEmpty(),
         check('cc').custom(aprendicesHelper.existecc),
         check('nombre', 'El campo nombre es obligatorio').not().isEmpty(),
@@ -25,20 +25,22 @@ router.post('/',
     controladorAprendis.crearAprendis
 );
 
-router.put("/cargarCloud/:id",[
+// PUT /api/aprendices/cargarCloud/:id
+router.put("/cargarCloud/:id", [
     validarJWT,
     check('id').isMongoId(),
     check('id').custom(aprendicesHelper.existeAprendizID),
-    validarExistaArchivo,
+    validarExistaArchivo, 
     validarCampos
-],controladorAprendis.cargarArchivoCloud);
+], controladorAprendis.cargarArchivoCloud);
 
-router.get("/uploadClou/:id",[ // img
+// GET /api/aprendices/uploadClou/:id
+router.get("/uploadClou/:id", [
     validarJWT,
     check('id', 'No es un ID válido').isMongoId(),
     check('id').custom(aprendicesHelper.existeAprendizID), 
     validarCampos   
-],controladorAprendis.mostrarImagenCloud)
+], controladorAprendis.mostrarImagenCloud);
 
 
 

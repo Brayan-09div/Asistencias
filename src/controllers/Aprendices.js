@@ -1,93 +1,88 @@
 import mongoose from 'mongoose';
 import Aprendis from '../models/Aprendices.js';
 import Fichas from '../models/Fichas.js';
-import subirArchivo from '../helpers/subir_archivo.js';
-import * as fs from 'fs'
-import path from 'path'
-import url from 'url'
-import { v2 as cloudinary } from 'cloudinary'
+import { v2 as cloudinary } from 'cloudinary';
 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_KEY,
+    api_secret: process.env.CLOUDINARY_SECRET,
+    secure: true
+});
 
 const controladorAprendis = {
 
- cargarArchivoCloud : async (req, res) => {
-        cloudinary.config({
-            cloud_name: process.env.CLOUDINARY_NAME,
-            api_key: process.env.CLOUDINARY_KEY,
-            api_secret: process.env.CLOUDINARY_SECRET,
-            secure: true
-        });
-    
-        const { id } = req.params;
-        try {
-            //subir archivo
-            const { tempFilePath } = req.files.archivo
-            cloudinary.uploader.upload(tempFilePath,
-                { width: 250, crop: "limit" },
-                async function (error, result) {
-                    if (result) {
-                        let envio = await Aprendis.findById(id);
-                        if (envio.firmaVirtual) {
-                            const nombreTemp = envio.firmaVirtual.split('/')
-                            const nombreArchivo = nombreTemp[nombreTemp.length - 1] // hgbkoyinhx9ahaqmpcwl jpg
-                            const [public_id] = nombreArchivo.split('.')
-                            cloudinary.uploader.destroy(public_id)
-                        }
-                        envio = await Aprendis.findByIdAndUpdate(id, { firmaVirtual: result.url })
-                    
-                        res.json({ url: result.url });
-                    } else {
-                        res.json(error)
-                    }
-    
-                })
-        } catch (error) {
-            res.status(400).json({ error, 'general': 'Controlador' })
-        }
-    },
-    
-    
-    mostrarImagenCloud : async (req, res) => {
-        const { id } = req.params
-    
-        try {
-            let aprendiz = await Aprendis.findById(id)
-            if (aprendiz.firmaVirtual) {
-                return res.json({ url: aprendiz.firmaVirtual})
-            }
-            res.status(400).json({ msg: 'Falta Imagen' })
-        } catch (error) {
-            res.status(400).json({ error })
-        }
-    },
-    
-
-    // Crear un nuevo aprendiz
     crearAprendis: async (req, res) => {
         const { cc, nombre, email, telefono, IdFicha } = req.body;
-
         try {
             const fichaExistente = await Fichas.findById(IdFicha);
             if (!fichaExistente) {
                 return res.status(404).json({ error: 'La ficha especificada no existe' });
             }
-
+            let firmaVirtualUrl = null;
+            if (req.files && req.files.firmaVirtual) {
+                const { tempFilePath } = req.files.firmaVirtual;
+                const result = await cloudinary.uploader.upload(tempFilePath, {
+                    width: 250, 
+                    crop: "limit"
+                });
+                firmaVirtualUrl = result.secure_url; 
+            }
             const nuevoAprendis = new Aprendis({
                 cc,
                 nombre,
                 email,
                 telefono,
                 IdFicha,
-                firmaVirtual 
+                firmaVirtual: firmaVirtualUrl 
             });
-
             const resultado = await nuevoAprendis.save();
-            
             console.log('Aprendiz creado:', resultado);
             res.json(resultado);
         } catch (error) {
             console.error('Error al crear aprendiz:', error);
             res.status(500).json({ error: 'Error al crear el aprendiz' });
+        }
+    },
+
+    cargarArchivoCloud : async (req, res) => {
+        const { id } = req.params;
+
+        try {
+            const { tempFilePath } = req.files.archivo;
+
+            const result = await cloudinary.uploader.upload(tempFilePath, {
+                width: 250,
+                crop: "limit"
+            });
+
+            let envio = await Aprendis.findById(id);
+            if (envio.firmaVirtual) {
+                const nombreTemp = envio.firmaVirtual.split('/');
+                const nombreArchivo = nombreTemp[nombreTemp.length - 1];
+                const [public_id] = nombreArchivo.split('.');
+                cloudinary.uploader.destroy(public_id);
+            }
+
+            envio = await Aprendis.findByIdAndUpdate(id, { firmaVirtual: result.url });
+            res.json({ url: result.url });
+        } catch (error) {
+            res.status(400).json({ error, 'general': 'Controlador' });
+        }
+    },
+
+  
+    mostrarImagenCloud: async (req, res) => {
+        const { id } = req.params;
+
+        try {
+            let aprendiz = await Aprendis.findById(id);
+            if (aprendiz.firmaVirtual) {
+                return res.json({ url: aprendiz.firmaVirtual });
+            }
+            res.status(400).json({ msg: 'Falta Imagen' });
+        } catch (error) {
+            res.status(400).json({ error });
         }
     },
 
