@@ -2,6 +2,15 @@ import Usuario from "../models/Usuarios.js";
 import bcryptjs from "bcrypt";
 import { generarJWT } from "../middleware/validarJWT.js";
 import { sendEmail } from '../utils/mailer.js'; 
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_NAME,
+    api_key: process.env.CLOUDINARY_KEY,
+    api_secret: process.env.CLOUDINARY_SECRET,
+    secure: true
+});
+
 
 const usuarioController = {
   // Crear un nuevo usuario------------------------------------------------------------------------
@@ -25,7 +34,7 @@ const usuarioController = {
    
       const salt = bcryptjs.genSaltSync();
       const passwordEncriptada = bcryptjs.hashSync(password, salt);
-   
+
       const nuevoUsuario = new Usuario({
         email,
         password: passwordEncriptada,
@@ -40,6 +49,54 @@ const usuarioController = {
       res.status(500).json({ error: "Error al crear usuario" });
     }
   },   
+  
+  cargarArchivoCloud: async (req, res) => {
+    const { id } = req.params;
+    try {
+        if (!req.files || !req.files.archivo) {
+            return res.status(400).json({ error: 'No se ha cargado ningún archivo' });
+        }
+        const { tempFilePath } = req.files.archivo;
+        const result = await cloudinary.uploader.upload(tempFilePath, {
+            width: 250,
+            crop: "limit"
+        });
+        let usuario = await Usuario.findById(id);
+        if (!usuario) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        if (usuario.avatar) {
+            const nombreTemp = usuario.avatar.split('/');
+            const nombreArchivo = nombreTemp[nombreTemp.length - 1];
+            const [public_id] = nombreArchivo.split('.');
+            await cloudinary.uploader.destroy(public_id);
+        }
+        usuario = await Usuario.findByIdAndUpdate(id, { avatar: result.url }, { new: true });
+        res.json({ url: result.url, usuario });
+    } catch (error) {
+        console.error("Error al cargar archivo en Cloudinary:", error);
+        res.status(500).json({ error: "Error al cargar archivo" });
+    }
+},
+
+
+mostrarImagenCloud: async (req, res) => {
+  const { id } = req.params;
+  try {
+      let usuario = await Usuario.findById(id);
+      if (!usuario) {
+          return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+      if (usuario.avatar) {
+          return res.json({ url: usuario.avatar });
+      }
+      res.status(400).json({ msg: 'El usuario no tiene una imagen asociada' });
+  } catch (error) {
+      console.error("Error al mostrar imagen de Cloudinary:", error);
+      res.status(500).json({ error: "Error al mostrar imagen" });
+  }
+},
+
 
 // Login------------------------------------------------------------------------------------
 login: async (req, res) => {
