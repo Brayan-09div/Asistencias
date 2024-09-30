@@ -4,6 +4,7 @@ import { validarJWT } from '../middleware/validarJWT.js';
 import { validarCampos } from '../middleware/validar-campos.js';
 import usuarioController from '../controllers/usuarios.js';
 import { usuarioHelper } from '../helpers/Usuarios.js';
+import validarExistaArchivo from '../middleware/validar_file.js';
 
 const router = express.Router();
 
@@ -16,6 +17,26 @@ router.post('/', [
     check('password', 'La contraseña debe tener al menos 8 caracteres').isLength({ min: 8 }),
     validarCampos
 ], usuarioController.crearUsuario);
+
+
+// PUT /api/aprendices/cargarCloud/:id
+router.put("/cargarCloud/:id", [
+    validarJWT,
+    check('id').isMongoId(),
+    check('id').custom(usuarioHelper.existeUsuarioID),
+    validarExistaArchivo, 
+    validarCampos
+], usuarioController.cargarArchivoCloud);
+
+// GET /api/aprendices/uploadClou/:id
+router.get("/uploadClou/:id", [
+    validarJWT,
+    check('id', 'No es un ID válido').isMongoId(),
+    check('id').custom(usuarioHelper.existeUsuarioID), 
+    validarCampos   
+], usuarioController.mostrarImagenCloud);
+
+
 
 
 router.post('/login', [
@@ -35,6 +56,7 @@ router.put('/editar/:id', [
     validarJWT,
     check('id', 'ID inválido').isMongoId(),
     check('email', 'El email es obligatorio').not().isEmpty(),
+    check('email').custom(usuarioHelper.existeEmail),
     check('email', 'El email no es válido').isEmail(),
     validarCampos
 ], usuarioController.editarUsuario);

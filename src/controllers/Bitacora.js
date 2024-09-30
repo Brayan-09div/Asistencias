@@ -5,30 +5,49 @@ const bitacoraController = {
 
     crearBitacora: async (req, res) => {
         const { cc, fecha } = req.body;
+        const fechaBuscada = new Date(fecha || Date.now());
+    
+        // Obtener la fecha de inicio y fin para la comparación (todo el día)
+        const fechaInicio = new Date(fechaBuscada);
+        fechaInicio.setHours(0, 0, 0, 0); // Establecer a medianoche
+        const fechaFin = new Date(fechaBuscada);
+        fechaFin.setHours(23, 59, 59, 999); // Establecer a final del día
+    
         try {
-    
+            // Buscar aprendiz por cc
             const aprendiz = await Aprendices.findOne({ cc });
-            
-            
-    
             if (!aprendiz) {
                 return res.status(404).json({ error: 'Aprendiz no encontrado' });
             }
-            
+    
+            // Verificar si ya existe una bitácora para el mismo aprendiz en la misma fecha
+            const existeBitacora = await Bitacora.findOne({
+                IdAprendis: aprendiz._id,
+                fecha: {
+                    $gte: fechaInicio,
+                    $lte: fechaFin
+                }
+            });
+    
+            if (existeBitacora) {
+                return res.status(400).json({ error: 'Ya existe una bitácora para este aprendiz en la misma fecha' });
+            }
+    
+            // Crear nueva bitácora
             const nuevaBitacora = new Bitacora({
                 IdAprendis: aprendiz._id,
-                fecha: fecha || Date.now(),
-                estado: 'pendiente' 
+                fecha: fechaBuscada,
+                estado: 'pendiente'
             });
+    
             const resultado = await nuevaBitacora.save();
-            console.log('Bitácora creada:', resultado);
             res.status(201).json(resultado);
         } catch (error) {
             console.error('Error al crear bitácora:', error);
             res.status(500).json({ error: 'Error al crear bitácora' });
         }
     },
-
+    
     // Listar todas las entradas de bitácora
     listarTodo: async (req, res) => {
         try {

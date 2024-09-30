@@ -8,8 +8,8 @@ const usuarioSchema = new mongoose.Schema({
     roles: { type: [String], default: ["user"] },  
     resetPasswordToken: { type: String },  
     resetPasswordExpires: { type: Date },  
+    avatar: { type: String },  
 }, { timestamps: true });
-
 
 export default mongoose.model("Usuarios", usuarioSchema);
 
